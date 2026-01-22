@@ -1,0 +1,161 @@
+
+services:
+  # auth
+  auth-go:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+      secrets:
+        - netrc
+    environment:
+      GOPRIVATE: gitlab.crja72.ru
+      GOSUMDB: off
+    container_name: auth-app
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis-auth:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    env_file:
+      - ./services/auth-service/.env
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # user
+  user-go:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+      secrets:
+        - netrc
+    container_name: user-app
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+    environment:
+      GOPRIVATE: gitlab.crja72.ru
+      GOSUMDB: off
+    env_file:
+      - ./services/user-service/.env
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # task
+  task_migrate:
+    build:
+      context: .
+      dockerfile: services/task_service/Dockerfile
+      secrets:
+        - netrc
+      target: migration
+    container_name: task_migrate
+    command: ["./migrate", "--path", "/migrations", "up"]
+    env_file:
+      - ./services/task_service/.env
+    depends_on:
+      postgres-task:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  task_service:
+    build:
+      context: .
+      dockerfile: services/task_service/Dockerfile
+      secrets:
+        - netrc
+      target: server
+    container_name: task_service
+    restart: unless-stopped
+    networks:
+      - app-network
+    env_file:
+      - ./services/task_service/.env
+    depends_on:
+      task_migrate:
+        condition: service_completed_successfully
+      postgres-task:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # group
+  group-go:
+    build:
+      context: ./services/group-service
+      dockerfile: Dockerfile
+      secrets:
+        - netrc
+    container_name: group-app
+    depends_on:
+      postgres-group:
+        condition: service_healthy
+      user-go:
+        condition: service_started
+      redis-cache:
+        condition: service_healthy
+    environment:
+      GOPRIVATE: gitlab.crja72.ru
+      GOSUMDB: off
+    env_file:
+      - ./services/group-service/config/.env
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+      secrets:
+        - netrc
+    container_name: api-gateway
+    depends_on:
+      auth-go:
+        condition: service_healthy
+      user-go:
+        condition: service_healthy
+      group-go:
+        condition: service_healthy
+      task_service:
+        condition: service_healthy
+    environment:
+      GOPRIVATE: gitlab.crja72.ru
+      GOSUMDB: off
+    env_file:
+      - ./services/api-gateway/config/.env
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s

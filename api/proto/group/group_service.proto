@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package group;
+
+option go_package = "https://github.com/RomanKovalev007/tutors_platform/api/gen/go/group;group";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+service GroupsService {
+    rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse) {
+        option (google.api.http) = {
+            post: "/v1/groups"
+            body: "*"
+        };
+    }
+    rpc ListGroups(ListGroupsRequest) returns (ListGroupsResponse) {
+        option (google.api.http) = {
+            get: "/v1/groups"
+        };
+    }
+    rpc GetGroup(GetGroupRequest) returns (GetGroupResponse) {
+        option (google.api.http) = {
+            get: "/v1/groups/{id}"
+        };
+    }
+    rpc UpdateGroup(UpdateGroupRequest) returns (UpdateGroupResponse) {
+        option (google.api.http) = {
+            patch: "/v1/groups/{id}"
+            body: "*"
+        };
+    }
+    rpc DeleteGroup(DeleteGroupRequest) returns (DeleteGroupResponse) {
+        option (google.api.http) = {
+            delete: "/v1/groups/{id}"
+        };
+    }
+
+    rpc ListGroupMembers(ListGroupMembersRequest) returns (ListGroupMembersResponse) {
+        option (google.api.http) = {
+            get: "/v1/groups/{group_id}/members"
+        };
+    }
+    rpc AddGroupMembers(AddGroupMembersRequest) returns (AddGroupMembersResponse) {
+        option (google.api.http) = {
+            post: "/v1/groups/{group_id}/members"
+            body: "student_ids"
+        };
+    }
+    rpc RemoveGroupMembers(RemoveGroupMembersRequest) returns (RemoveGroupMembersResponse) {
+        option (google.api.http) = {
+            post: "/v1/groups/{group_id}/members:remove"
+            body: "*"
+        };
+    }
+}
+
+message Error {
+    string code = 1;
+    string message = 2;
+}
+
+message Group {
+    string id = 1;
+    string tutor_id = 2;
+    string name = 3;
+    string description = 4;      
+    google.protobuf.Timestamp created_at = 5;
+    int32 member_count = 6;       // Вычисляемое поле - количество участников
+    repeated GroupMember members = 7; // Участники группы (опционально)
+}
+
+message GroupMember {
+    string group_id = 1;
+    string student_id = 2;
+    google.protobuf.Timestamp joined_at = 3;
+}
+
+message CreateGroupRequest {
+    string tutor_id = 1;
+    string name = 2;
+    string description = 3;
+}
+
+message CreateGroupResponse {
+    oneof result {
+        Group group = 1;
+        Error error = 2;
+    }
+}
+
+message ListGroupsRequest {
+    oneof filter {
+        string tutor_id = 1;      // Группы конкретного репетитора
+        string student_id = 2;    // Группы конкретного студента
+    }
+    bool include_members = 3;     // Включать ли список участников
+}
+
+message ListGroupsResponse {
+    repeated Group groups = 1;
+    Error error = 2;
+}
+
+message GetGroupRequest {
+    string id = 1;                // ID группы
+    bool include_members = 2;     // Включать ли список участников
+}
+
+message GetGroupResponse {
+    oneof result {
+        Group group = 1;
+        Error error = 2;
+    }
+}
+
+message UpdateGroupRequest {
+    string id = 1;                // ID группы для обновления
+    optional string name = 2;     // Новое название (если нужно обновить)
+    optional string description = 3; // Новое описание (если нужно обновить)
+}
+
+message UpdateGroupResponse {
+    oneof result {
+        Group group = 1;
+        Error error = 2;
+    }
+}
+
+message DeleteGroupRequest {
+    string id = 1;                // ID группы для удаления
+}
+
+message DeleteGroupResponse {
+    Error error = 1;
+}
+
+message ListGroupMembersRequest {
+    string group_id = 1;          // ID группы
+}
+
+message ListGroupMembersResponse {
+    repeated GroupMember members = 1;
+    Error error = 2;
+}
+
+message AddGroupMembersRequest {
+    string group_id = 1;          // ID группы
+    repeated string student_ids = 2; // Массив ID студентов для добавления
+}
+
+message AddGroupMembersResponse {
+    int32 added_count = 1;        // Сколько студентов успешно добавлено
+    Error error = 2;
+}
+
+message RemoveGroupMembersRequest {
+    string group_id = 1;          // ID группы
+    repeated string student_ids = 2; // Массив ID студентов для удаления
+}
+
+message RemoveGroupMembersResponse {
+    int32 removed_count = 1;      // Сколько студентов успешно удалено
+    Error error = 2;
+}

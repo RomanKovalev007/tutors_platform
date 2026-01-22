@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS mark_expired_tasks();

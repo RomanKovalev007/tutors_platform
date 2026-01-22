@@ -1,0 +1,8 @@
+include:
+  - docker-compose.infrastructure.yaml
+  - docker-compose.services.yaml
+
+
+networks:
+  app-network:
+    driver: bridge

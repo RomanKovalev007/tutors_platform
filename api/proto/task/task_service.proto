@@ -1,0 +1,284 @@
+syntax = "proto3";
+
+package task;
+
+option go_package = "github.com/RomanKovalev007/tutors_platform/api/gen/go/task;task";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+import "google/protobuf/duration.proto";
+
+service TaskService {
+    rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {
+        option (google.api.http) = {
+            post: "/v1/tasks"
+            body: "*"
+        };
+    }
+    rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse) {
+        option (google.api.http) = {
+            patch: "/v1/tasks/{task_id}"
+            body: "*"
+        };
+    }
+    rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse) {
+        option (google.api.http) = {
+            delete: "/v1/tasks/{task_id}"
+        };
+    }
+    rpc GetTask(GetTaskRequest) returns (GetTaskResponse) {
+        option (google.api.http) = {
+            get: "/v1/tasks/{task_id}"
+        };
+    }
+    rpc GetGroupTasks(GetGroupTasksRequest) returns (GetGroupTasksResponse) {
+        option (google.api.http) = {
+            get: "/v1/groups/{group_id}/tasks"
+        };
+    }
+    rpc GetCreatedByMeTasks(GetCreatedByMeTasksRequest) returns (GetCreatedByMeTasksResponse) {
+        option (google.api.http) = {
+            get: "/v1/tasks/created-by-me"
+        };
+    }
+
+
+    rpc CreateSubmission(CreateSubmissionRequest) returns (CreateSubmissionResponse) {
+        option (google.api.http) = {
+            post: "/v1/tasks/{task_id}/submissions"
+            body: "*"
+        };
+    }
+    rpc UpdateSubmission(UpdateSubmissionRequest) returns (UpdateSubmissionResponse) {
+        option (google.api.http) = {
+            patch: "/v1/submissions/{submission_id}"
+            body: "*"
+        };
+    }
+    rpc DeleteSubmission(DeleteSubmissionRequest) returns (DeleteSubmissionResponse) {
+        option (google.api.http) = {
+            delete: "/v1/submissions/{submission_id}"
+        };
+    }
+
+    rpc GradeSubmission(GradeSubmissionRequest) returns (GradeSubmissionResponse) {
+        option (google.api.http) = {
+            post: "/v1/submissions/{submission_id}/grade"
+            body: "*"
+        };
+    }
+    rpc ResetGrade(ResetGradeRequest) returns (ResetGradeResponse) {
+        option (google.api.http) = {
+            post: "/v1/submissions/{submission_id}/reset-grade"
+        };
+    }
+
+    rpc GetSubmission(GetSubmissionRequest) returns (GetSubmissionResponse) {
+        option (google.api.http) = {
+            get: "/v1/submissions/{submission_id}"
+        };
+    }
+    rpc GetTaskSubmissions(GetTaskSubmissionsRequest) returns (GetTaskSubmissionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/tasks/{task_id}/submissions"
+        };
+    }
+}
+
+// вспомогательные структуры 
+enum AssignedTaskStatus {
+    ACTIVE = 0;
+    EXPIRED = 1;
+}
+
+enum SubmittedTaskStatus {
+    UNSPECIFIED = 0;
+    PENDING = 1;
+    VERIFIED = 2;
+}
+
+message AssignedTask {
+    string task_id = 1;
+    string group_id = 2;
+    string tutor_id = 3;
+    string title = 4;
+    optional string description = 5;
+    int32 max_score = 6;
+    AssignedTaskStatus status = 7;
+    google.protobuf.Timestamp deadline = 8;
+    google.protobuf.Timestamp created_at = 9;
+}
+
+message AssignedTaskShort {
+    string task_id = 1;
+    string group_id = 2;
+    string tutor_id = 3;
+    string title = 4;
+    google.protobuf.Timestamp deadline = 5;
+    AssignedTaskStatus status = 6;
+}
+
+message SubmittedTask {
+    string submission_id = 1;
+    string task_id = 2;
+    string student_id = 3;
+    string content = 4;
+    SubmittedTaskStatus status = 5;
+    optional int32 score = 6;
+    optional string feedback = 7;
+    google.protobuf.Timestamp created_at = 8;
+    optional google.protobuf.Timestamp updated_at = 9;
+    optional google.protobuf.Duration overdue_by = 10;
+}
+
+message SubmittedTaskShort {
+    string submission_id = 1;
+    string task_id = 2;
+    string student_id = 3;
+    optional int32 score = 4;
+    SubmittedTaskStatus status = 5;
+    google.protobuf.Timestamp created_at = 6;
+    optional google.protobuf.Duration overdue_by = 7;
+}
+
+// основные сб
+message CreateTaskRequest {
+    string group_id = 1;
+    string tutor_id = 2;
+    string title = 3;
+    optional string description = 4;
+    int32 max_score = 5;
+    google.protobuf.Timestamp deadline = 6;
+}
+
+message CreateTaskResponse {
+    AssignedTask task = 1;
+}
+
+message UpdateTaskRequest {
+    string tutor_id = 1;
+    string task_id = 2;
+    optional string title = 3;
+    optional string description = 4;
+    optional string file_id = 5;
+    optional int32 max_score = 6;
+    optional google.protobuf.Timestamp deadline = 7;
+}
+
+message UpdateTaskResponse {
+    AssignedTask task = 1;
+}
+
+message DeleteTaskRequest {
+    string user_id = 1;
+    string task_id = 2;
+}
+
+message DeleteTaskResponse {
+    bool success = 1;
+}
+
+message GetTaskRequest {
+    string task_id = 1;
+}
+
+message GetTaskResponse {
+    AssignedTask task = 1;
+}
+
+message GetGroupTasksRequest {
+    string group_id = 1;
+    int32 offset = 2;
+    int32 limit = 3;
+}
+
+message GetGroupTasksResponse {
+    repeated AssignedTaskShort tasks = 1;
+    int32 total = 2;
+    int32 offset = 3;
+    int32 limit = 4;
+}
+
+message GetCreatedByMeTasksRequest {
+    string user_id = 1;
+    int32 offset = 2;
+    int32 limit = 3;
+}
+
+message GetCreatedByMeTasksResponse {
+    repeated AssignedTaskShort tasks = 1;
+    int32 total = 2;
+    int32 offset = 3;
+    int32 limit = 4;
+}
+
+message CreateSubmissionRequest {
+    string task_id = 1;
+    string student_id = 2;
+    string content = 3;
+}
+
+message CreateSubmissionResponse {
+    SubmittedTask submission = 1;
+}
+
+message UpdateSubmissionRequest {
+    string user_id = 1;
+    string submission_id = 2;
+    optional string content = 3;
+}
+
+message UpdateSubmissionResponse {
+    SubmittedTask submission = 1;
+}
+
+message DeleteSubmissionRequest {
+    string user_id = 1;
+    string submission_id = 2;
+}
+
+message DeleteSubmissionResponse {
+    bool success = 1;
+}
+
+message GradeSubmissionRequest {
+    string submission_id = 1;
+    string tutor_id = 2;
+    optional int32 score = 3;
+    optional string feedback = 4;
+}
+
+message GradeSubmissionResponse {
+    SubmittedTask submission = 1;
+}
+
+message ResetGradeRequest {
+    string user_id = 1;
+    string submission_id = 2;
+}
+
+message ResetGradeResponse {
+    bool success = 1;
+}
+
+message GetSubmissionRequest {
+    string submission_id = 1;
+}
+
+message GetSubmissionResponse {
+    SubmittedTask submission = 1;
+}
+
+message GetTaskSubmissionsRequest {
+    string task_id = 1;
+    int32 offset = 3;
+    int32 limit = 4;
+}
+
+message GetTaskSubmissionsResponse {
+    repeated SubmittedTaskShort submissions = 1;
+    int32 total = 2;
+    int32 offset = 3;
+    int32 limit = 4;
+}

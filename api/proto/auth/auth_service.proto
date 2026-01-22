@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "https://github.com/RomanKovalev007/tutors_platform/api/gen/go/auth;auth";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+service AuthService {
+    // Регистрация / аутентификация
+    rpc Register(RegisterRequest) returns (RegisterResponse) {
+        option (google.api.http) = {
+            post: "/v1/auth/register"
+            body: "*"
+        };
+    }
+    rpc Login(LoginRequest) returns (LoginResponse) {
+        option (google.api.http) = {
+            post: "/v1/auth/login"
+            body: "*"
+        };
+    }
+    rpc Logout(LogoutRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            post: "/v1/auth/logout"
+            body: "*"
+        };
+    }
+    rpc RefreshTokens(RefreshTokensRequest) returns (RefreshTokenResponse) {
+        option (google.api.http) = {
+            post: "/v1/auth/refresh"
+            body: "*"
+        };
+    }
+    
+    // Валидация токена
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+    
+    // Управление паролями
+    rpc ChangePassword(ChangePasswordRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            post: "/v1/auth/change-password"
+            body: "*"
+        };
+    }
+    rpc ForgotPassword(ForgotPasswordRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            post: "/v1/auth/forgot-password"
+            body: "*"
+        };
+    }
+    rpc ResetPassword(ResetPasswordRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            post: "/v1/auth/reset-password"
+            body: "*"
+        };
+    }
+    
+    // CRUD юзеров
+    rpc GetUserByID(GetUserByIDRequest) returns (GetUserResponse) {
+        option (google.api.http) = {
+            get: "/v1/auth/users/{user_id}"
+        };
+    }
+    rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserResponse) {
+        option (google.api.http) = {
+            get: "/v1/auth/users/email/{email}"
+        };
+    }
+    rpc UpdateUserStatus(UpdateUserStatusRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            patch: "/v1/auth/users/{user_id}/status"
+            body: "is_active"
+        };
+    }
+    rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+        option (google.api.http) = {
+            get: "/v1/auth/users"
+        };
+    }
+    rpc DeleteUser(DeleteUserRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            delete: "/v1/auth/users/{user_id}"
+        };
+    }
+}
+
+message EmptyResponse {}
+
+message Error {
+    string code = 1;
+    string message = 2;
+}
+
+message User {
+    string id = 1;
+    string email = 2;
+    bool is_active = 3;
+    google.protobuf.Timestamp created_at = 4;
+}
+
+// Регистрация и логин
+message RegisterRequest {
+    string email = 1;
+    string password = 2;
+    string confirm_password = 3;
+}
+
+message RegisterResponse {
+    User user = 1;
+    string access_token = 2;
+    string refresh_token = 3;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    User user = 1;
+    string access_token = 2;
+    string refresh_token = 3;
+}
+
+message LogoutRequest {
+    string refresh_token = 1;
+}
+
+message RefreshTokensRequest {
+    string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+    int32 expires_in = 3;
+}
+
+// Валидация токена
+message ValidateTokenRequest {
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    bool is_valid = 1;
+    string user_id = 2;
+    int32 expires_in = 3;
+}
+
+
+// Управление паролями
+message ChangePasswordRequest {
+    string user_id = 1;
+    string old_password = 2;
+    string new_password = 3;
+    string confirm_password = 4;
+}
+
+message ForgotPasswordRequest {
+    string email = 1;
+    string reset_url_template = 2;
+}
+
+message ResetPasswordRequest {
+    string token = 1;
+    string new_password = 2;
+    string confirm_password = 3;
+}
+
+// CRUD методы 
+message GetUserByIDRequest {
+    string user_id = 1;
+}
+
+message GetUserByEmailRequest {
+    string email = 1;
+}
+
+message GetUserResponse {
+    User user = 1;
+}
+
+message UpdateUserStatusRequest {
+    string user_id = 1;
+    bool is_active = 2;
+}
+
+
+message ListUsersRequest {
+    int32 limit = 1;
+    int32 offset = 2;
+    bool is_active = 3;
+}
+
+message ListUsersResponse {
+    repeated User users = 1;
+    int32 limit = 2;
+    int32 offset = 3;
+}
+
+message DeleteUserRequest {
+    string user_id = 1;
+}
+

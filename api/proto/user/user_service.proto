@@ -1,0 +1,269 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/RomanKovalev007/tutors_platform/api/gen/go/user;user";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+service UserService {
+    // Управление юзер профилями
+    rpc CreateUserProfile(CreateUserProfileRequest) returns (UserProfileResponse) {
+        option (google.api.http) = {
+            post: "/v1/users"
+            body: "*"
+        };
+    }
+    rpc GetUserProfileByID(GetUserProfileByIDRequest) returns (UserProfileResponse) {
+        option (google.api.http) = {
+            get: "/v1/users/{user_id}"
+        };
+    }
+    rpc GetUserProfileByEmail(GetUserProfileByEmailRequest) returns (UserProfileResponse) {
+        option (google.api.http) = {
+            get: "/v1/users/email/{email}"
+        };
+    }
+    rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UserProfileResponse) {
+        option (google.api.http) = {
+            patch: "/v1/users/{user_id}"
+            body: "*"
+        };
+    }
+    rpc DeleteUserProfile(DeleteUserProfileRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            delete: "/v1/users/{user_id}"
+        };
+    }
+    rpc ListUsers(ListUserProfilesRequest) returns (ListUserProfilesResponse) {
+        option (google.api.http) = {
+            get: "/v1/users"
+        };
+    }
+    
+    // Дополнительные методы юзер профилей
+    rpc GetUserTypes(GetUserTypesRequest) returns (UserTypesResponse) {
+        option (google.api.http) = {
+            get: "/v1/users/{user_id}/types"
+        };
+    }
+    
+    // Управление репет профилями
+    rpc CreateTutorProfile(CreateTutorProfileRequest) returns (TutorProfileResponse) {
+        option (google.api.http) = {
+            post: "/v1/tutors"
+            body: "*"
+        };
+    }
+    rpc GetTutorProfile(GetTutorProfileRequest) returns (TutorProfileResponse) {
+        option (google.api.http) = {
+            get: "/v1/tutors/{user_id}"
+        };
+    }
+    rpc UpdateTutorProfile(UpdateTutorProfileRequest) returns (TutorProfileResponse) {
+        option (google.api.http) = {
+            patch: "/v1/tutors/{user_id}"
+            body: "*"
+        };
+    }
+    rpc DeleteTutorProfile(DeleteTutorProfileRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            delete: "/v1/tutors/{user_id}"
+        };
+    }
+    
+    // Управление студент профилями
+    rpc CreateStudentProfile(CreateStudentProfileRequest) returns (StudentProfileResponse) {
+        option (google.api.http) = {
+            post: "/v1/students"
+            body: "*"
+        };
+    }
+    rpc GetStudentProfile(GetStudentProfileRequest) returns (StudentProfileResponse) {
+        option (google.api.http) = {
+            get: "/v1/students/{user_id}"
+        };
+    }
+    rpc UpdateStudentProfile(UpdateStudentProfileRequest) returns (StudentProfileResponse) {
+        option (google.api.http) = {
+            patch: "/v1/students/{user_id}"
+            body: "*"
+        };
+    }
+    rpc DeleteStudentProfile(DeleteStudentProfileRequest) returns (EmptyResponse) {
+        option (google.api.http) = {
+            delete: "/v1/students/{user_id}"
+        };
+    }
+    
+    // валидация
+    rpc ValidateTutor(ValidateTutorRequest) returns (ValidateTutorResponse);
+
+    // получить полный профиль юзера
+    rpc GetCompliteUserProfile(GetCompliteUserProfileRequest) returns (GetCompliteUserProfileResponse) {
+        option (google.api.http) = {
+            get: "/v1/users/{user_id}/full"
+        };
+    }
+}
+
+message EmptyResponse {}
+
+message Error {
+    string code = 1;
+    string message = 2;
+}
+
+message UserProfile {
+    string user_id = 1;
+    string email = 2;
+    string name = 3;
+    string surname = 4;
+	string telegram = 5;
+    google.protobuf.Timestamp created_at = 6;
+}
+
+message TutorProfile {
+    string user_id = 1;
+    string specialization = 2;
+    int32 experience_years = 3;
+	string bio = 4;
+    google.protobuf.Timestamp created_at = 5;
+}
+
+message StudentProfile {
+    string user_id = 1;
+    string grade_level = 2;
+	string bio = 3;
+    google.protobuf.Timestamp created_at = 4;
+}
+
+// Управление юзер профилями
+message CreateUserProfileRequest {
+    string user_id = 1;
+    string email = 2;
+    string name = 3;
+    string surname = 4;
+	string telegram = 5;
+}
+
+message GetUserProfileByIDRequest {
+    string user_id = 1;
+}
+
+message GetUserProfileByEmailRequest {
+    string email = 1;
+}
+
+message UpdateUserProfileRequest {
+    string user_id = 1;
+    string name = 2;
+    string surname = 3;
+	string telegram = 4;
+}
+
+message DeleteUserProfileRequest {
+    string user_id = 1;
+}
+
+message UserProfileResponse {
+    UserProfile profile = 1;
+}
+
+message ListUserProfilesRequest {
+    int32 offset = 1;
+	int32 limit = 2;
+    bool is_active = 3;
+}
+
+message ListUserProfilesResponse {
+    repeated UserProfile users = 1;
+    int32 offset = 2;
+	int32 limit = 3;
+}
+
+// доп методы юзер профилей
+message UserTypes {
+    bool is_tutor = 1;
+    bool is_student = 2;
+}
+
+message GetUserTypesRequest {
+    string user_id = 1;
+}
+
+message UserTypesResponse {
+    UserTypes types = 1;
+}
+
+// Управление репет профилями
+message CreateTutorProfileRequest {
+    string user_id = 1;
+    string specialization = 2;
+    int32 experience_years = 3;
+	string bio = 4;
+}
+
+message GetTutorProfileRequest {
+    string user_id = 1;
+}
+
+message UpdateTutorProfileRequest {
+    string user_id = 1;
+    string specialization = 2;
+    int32 experience_years = 3;
+	string bio = 4;
+}
+
+message DeleteTutorProfileRequest {
+    string user_id = 1;
+}
+
+message TutorProfileResponse {
+    TutorProfile profile = 1;
+}
+
+// Управление студент профилями
+message CreateStudentProfileRequest {
+    string user_id = 1;
+    string grade_level = 2;
+	string bio = 3;
+}
+
+message GetStudentProfileRequest {
+    string user_id = 1;
+}
+
+message UpdateStudentProfileRequest {
+    string user_id = 1;
+    string grade_level = 2;
+	string bio = 3;
+}
+
+message DeleteStudentProfileRequest {
+    string user_id = 1;
+}
+
+message StudentProfileResponse {
+    StudentProfile profile = 1;
+}
+
+// валидация 
+message ValidateTutorRequest {
+    string user_id = 1;
+}
+
+message ValidateTutorResponse {
+    bool is_valid_tutor = 1;
+}
+
+message GetCompliteUserProfileRequest{
+    string user_id = 1;
+}
+
+message GetCompliteUserProfileResponse{
+    UserProfile user_profile = 1;
+    TutorProfile tutor_profile = 2;
+    StudentProfile student_profile = 3;
+}

@@ -1,0 +1,239 @@
+
+services:
+  # Nginx reverse proxy - ONLY exposed port
+  nginx:
+    image: docker.io/nginx:1.25-alpine
+    platform: linux/amd64
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+      grafana:
+        condition: service_started
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/nginx-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: docker.io/prom/prometheus:v2.47.0
+    platform: linux/amd64
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.external-url=/prometheus/'
+      - '--web.route-prefix=/prometheus/'
+      - '--web.enable-lifecycle'
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/prometheus/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Grafana for dashboards
+  grafana:
+    image: docker.io/grafana/grafana:10.1.0
+    platform: linux/amd64
+    container_name: grafana
+    environment:
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Zookeeper and Kafka
+  zookeeper:
+    image: docker.io/confluentinc/cp-zookeeper:7.4.0
+    platform: linux/amd64
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "echo stat | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: docker.io/confluentinc/cp-kafka:7.4.0
+    platform: linux/amd64
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+ # Redis for auth
+  redis-auth:
+    image: docker.io/redis:7-alpine
+    platform: linux/amd64
+    container_name: redis-auth
+    environment:
+      REDIS_PORT: 6379
+      REDIS_HOST: redis
+      REDIS_DB: 0
+      REDIS_PASSWORD: ""
+    volumes:
+      - redis-data-auth:/data
+    command: redis-server --appendonly yes
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Redis for caching (shared by services)
+  redis-cache:
+    image: docker.io/redis:7-alpine
+    platform: linux/amd64
+    container_name: redis-cache
+    volumes:
+      - redis-data-cache:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # PostgreSQL for auth
+  postgres-auth:
+    image: docker.io/postgres:15-alpine
+    platform: linux/amd64
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+    volumes:
+      - postgres-data-auth:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 10s
+
+  # PostgreSQL for user
+  postgres-user:
+    image: docker.io/postgres:15-alpine
+    platform: linux/amd64
+    container_name: postgres-user
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: user_user
+      POSTGRES_PASSWORD: user_password
+    volumes:
+      - postgres-data-user:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_user -d user_db"]
+      interval: 10s
+
+  # PostgreSQL for task
+  postgres-task:
+    image: docker.io/postgres:15-alpine
+    platform: linux/amd64
+    restart: always
+    container_name: task_postgres
+    networks:
+      - app-network
+    environment:
+      POSTGRES_USER: task_postgres
+      POSTGRES_PASSWORD: task_postgres
+      POSTGRES_DB: task_postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U task_postgres -d task_postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_task:/var/lib/postgresql/data
+
+  # postgres for group
+  postgres-group:
+    image: docker.io/postgres:15-alpine
+    platform: linux/amd64
+    container_name: postgres-group
+    environment:
+      POSTGRES_DB: group-db
+      POSTGRES_USER: group_user
+      POSTGRES_PASSWORD: group_password
+    volumes:
+      - postgres-data-group:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U group_user -d group-db"]
+      interval: 10s
+
+volumes:
+  postgres-data-auth:
+  postgres-data-user:
+  postgres_data_task:
+  redis-data-auth:
+  redis-data-cache:
+  postgres-data-group:
+  prometheus-data:
+  grafana-data:
+  nginx-logs:
+
+
+secrets:
+  netrc:
+    file: ./.netrc

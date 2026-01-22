@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+    metrics_path: /metrics
+
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-go:9100']
+    metrics_path: /metrics
+
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-go:9100']
+    metrics_path: /metrics
+
+  - job_name: 'group-service'
+    static_configs:
+      - targets: ['group-go:9100']
+    metrics_path: /metrics
+
+  - job_name: 'task-service'
+    static_configs:
+      - targets: ['task_service:9100']
+    metrics_path: /metrics
