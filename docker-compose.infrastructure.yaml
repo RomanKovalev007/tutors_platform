@@ -234,6 +234,3 @@ volumes:
   nginx-logs:
 
 
-secrets:
-  netrc:
-    file: ./.netrc

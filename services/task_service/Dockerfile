@@ -14,8 +14,7 @@ ARG CACHEBUST=1
 # Копируем go.mod и go.sum в корень
 COPY services/task_service/go.mod services/task_service/go.sum ./
 
-RUN --mount=type=secret,id=netrc,target=/root/.netrc \
-    go mod download
+RUN go mod download
 
 # Копируем весь код task_service в корень /app (как было раньше)
 COPY services/task_service/ ./
@@ -24,8 +23,7 @@ COPY services/task_service/ ./
 COPY api ./api
 
 # Выполняем go mod tidy
-RUN --mount=type=secret,id=netrc,target=/root/.netrc \
-    go mod tidy
+RUN go mod tidy
 
 # Копируем миграции
 COPY services/task_service/migrations /migrations

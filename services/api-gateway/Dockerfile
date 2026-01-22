@@ -14,8 +14,7 @@ COPY services/api-gateway/go.mod services/api-gateway/go.sum ./
 COPY api/ ./api/
 
 # 3. Теперь go mod download видит api/go.mod и использует локальный replace
-RUN --mount=type=secret,id=netrc,target=/root/.netrc \
-    go mod download
+RUN go mod download
 
 # 4. Копируем код самого api-gateway
 COPY services/api-gateway/ .

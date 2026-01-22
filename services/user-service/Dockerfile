@@ -9,8 +9,7 @@ WORKDIR /app
 
 COPY go.mod go.sum ./
 
-RUN --mount=type=secret,id=netrc,target=/root/.netrc \
-    go mod download
+RUN go mod download
 
 
 COPY . .
