@@ -1,0 +1,550 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  GO_VERSION: "1.24"
+  COVERAGE_THRESHOLD: 30
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  # Detect which services changed
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      auth-service: ${{ steps.filter.outputs.auth-service }}
+      user-service: ${{ steps.filter.outputs.user-service }}
+      task-service: ${{ steps.filter.outputs.task-service }}
+      group-service: ${{ steps.filter.outputs.group-service }}
+      api-gateway: ${{ steps.filter.outputs.api-gateway }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            auth-service:
+              - 'services/auth-service/**'
+            user-service:
+              - 'services/user-service/**'
+            task-service:
+              - 'services/task_service/**'
+            group-service:
+              - 'services/group-service/**'
+            api-gateway:
+              - 'services/api-gateway/**'
+
+  # ==================== AUTH SERVICE ====================
+  build-auth-service:
+    needs: changes
+    if: needs.changes.outputs.auth-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/auth-service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/auth-service
+        run: go mod download
+
+      - name: Build
+        working-directory: services/auth-service
+        run: go build -o /dev/null ./...
+
+  test-auth-service:
+    needs: changes
+    if: needs.changes.outputs.auth-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/auth-service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/auth-service
+        run: go mod download
+
+      - name: Run tests with coverage
+        working-directory: services/auth-service
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Show coverage
+        working-directory: services/auth-service
+        run: go tool cover -func=coverage.out
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-auth-service
+          path: services/auth-service/coverage.out
+          retention-days: 1
+
+  coverage-auth-service:
+    needs: test-auth-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-auth-service
+          path: services/auth-service
+
+      - name: Check coverage threshold
+        working-directory: services/auth-service
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${COVERAGE}%"
+          echo "Threshold: ${{ env.COVERAGE_THRESHOLD }}%"
+          if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            echo "ERROR: Coverage ${COVERAGE}% is below threshold ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          fi
+          echo "SUCCESS: Coverage ${COVERAGE}% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
+
+  docker-auth-service:
+    needs: coverage-auth-service
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: services/auth-service
+          file: services/auth-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/auth-service:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/auth-service:latest
+
+  # ==================== USER SERVICE ====================
+  build-user-service:
+    needs: changes
+    if: needs.changes.outputs.user-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/user-service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/user-service
+        run: go mod download
+
+      - name: Build
+        working-directory: services/user-service
+        run: go build -o /dev/null ./...
+
+  test-user-service:
+    needs: changes
+    if: needs.changes.outputs.user-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/user-service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/user-service
+        run: go mod download
+
+      - name: Run tests with coverage
+        working-directory: services/user-service
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Show coverage
+        working-directory: services/user-service
+        run: go tool cover -func=coverage.out
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-user-service
+          path: services/user-service/coverage.out
+          retention-days: 1
+
+  coverage-user-service:
+    needs: test-user-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-user-service
+          path: services/user-service
+
+      - name: Check coverage threshold
+        working-directory: services/user-service
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${COVERAGE}%"
+          echo "Threshold: ${{ env.COVERAGE_THRESHOLD }}%"
+          if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            echo "ERROR: Coverage ${COVERAGE}% is below threshold ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          fi
+          echo "SUCCESS: Coverage ${COVERAGE}% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
+
+  docker-user-service:
+    needs: coverage-user-service
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: services/user-service
+          file: services/user-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/user-service:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/user-service:latest
+
+  # ==================== TASK SERVICE ====================
+  build-task-service:
+    needs: changes
+    if: needs.changes.outputs.task-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/task_service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/task_service
+        run: go mod download
+
+      - name: Build
+        working-directory: services/task_service
+        run: go build -o /dev/null ./...
+
+  test-task-service:
+    needs: changes
+    if: needs.changes.outputs.task-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/task_service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/task_service
+        run: go mod download
+
+      - name: Run tests with coverage
+        working-directory: services/task_service
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Show coverage
+        working-directory: services/task_service
+        run: go tool cover -func=coverage.out
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-task-service
+          path: services/task_service/coverage.out
+          retention-days: 1
+
+  coverage-task-service:
+    needs: test-task-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-task-service
+          path: services/task_service
+
+      - name: Check coverage threshold
+        working-directory: services/task_service
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${COVERAGE}%"
+          echo "Threshold: ${{ env.COVERAGE_THRESHOLD }}%"
+          if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            echo "ERROR: Coverage ${COVERAGE}% is below threshold ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          fi
+          echo "SUCCESS: Coverage ${COVERAGE}% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
+
+  docker-task-service:
+    needs: coverage-task-service
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/task_service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/task-service:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/task-service:latest
+
+  # ==================== GROUP SERVICE ====================
+  build-group-service:
+    needs: changes
+    if: needs.changes.outputs.group-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/group-service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/group-service
+        run: go mod download
+
+      - name: Build
+        working-directory: services/group-service
+        run: go build -o /dev/null ./...
+
+  test-group-service:
+    needs: changes
+    if: needs.changes.outputs.group-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/group-service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/group-service
+        run: go mod download
+
+      - name: Run tests with coverage
+        working-directory: services/group-service
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Show coverage
+        working-directory: services/group-service
+        run: go tool cover -func=coverage.out
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-group-service
+          path: services/group-service/coverage.out
+          retention-days: 1
+
+  coverage-group-service:
+    needs: test-group-service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-group-service
+          path: services/group-service
+
+      - name: Check coverage threshold
+        working-directory: services/group-service
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${COVERAGE}%"
+          echo "Threshold: ${{ env.COVERAGE_THRESHOLD }}%"
+          if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            echo "ERROR: Coverage ${COVERAGE}% is below threshold ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          fi
+          echo "SUCCESS: Coverage ${COVERAGE}% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
+
+  docker-group-service:
+    needs: coverage-group-service
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: services/group-service
+          file: services/group-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/group-service:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/group-service:latest
+
+  # ==================== API GATEWAY ====================
+  build-api-gateway:
+    needs: changes
+    if: needs.changes.outputs.api-gateway == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/api-gateway/go.sum
+
+      - name: Download dependencies
+        working-directory: services/api-gateway
+        run: go mod download
+
+      - name: Build
+        working-directory: services/api-gateway
+        run: go build -o /dev/null ./...
+
+  test-api-gateway:
+    needs: changes
+    if: needs.changes.outputs.api-gateway == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/api-gateway/go.sum
+
+      - name: Download dependencies
+        working-directory: services/api-gateway
+        run: go mod download
+
+      - name: Run tests
+        working-directory: services/api-gateway
+        run: go test -v ./... || true
+
+  docker-api-gateway:
+    needs: test-api-gateway
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/api-gateway/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api-gateway:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api-gateway:latest

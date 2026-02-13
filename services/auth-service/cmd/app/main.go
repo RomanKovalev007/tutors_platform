@@ -56,7 +56,7 @@ func main() {
 	tokenCfg.AccessTTL = time.Duration(cfg.AccessTTL) * time.Minute
 	tokenCfg.RefreshTTL = time.Duration(cfg.RefreshTTL) * time.Hour
 
-	apiServer := transport.NewApiServer(pgDB.DB, redisDB, tokenCfg, producer)
+	apiServer := transport.NewApiServer(pgDB.DB, redisDB, tokenCfg, producer, cfg.KafkaConfig.Topic)
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterAuthServiceServer(grpcServer, apiServer)

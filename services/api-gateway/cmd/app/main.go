@@ -19,7 +19,6 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("could not parse config: %w", err))
 	}
-
 	authClient, err := auth.NewClient(cfg.AuthGRPC)
 	if err != nil {
 		panic(fmt.Errorf("failed to create auth client: %w", err))

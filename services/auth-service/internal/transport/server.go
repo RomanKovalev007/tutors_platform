@@ -20,12 +20,12 @@ type ApiServer struct{
 	
 }
 
-func NewApiServer(pgDB *sql.DB, redisClient *redis.Client, tokenCfg token.TokenConfig, producer *kafka.Producer) *ApiServer{
+func NewApiServer(pgDB *sql.DB, redisClient *redis.Client, tokenCfg token.TokenConfig, producer *kafka.Producer, topic string) *ApiServer{
 	userRepo := repository.NewUserRepository(pgDB)
 	tokenRepo := repository.NewRedisTokenRepository(redisClient, "auth:refresh_token:")
 	userService := service.NewUserService(userRepo)
-	authService := service.NewAuthService(tokenCfg, userRepo, tokenRepo, producer)
-	
+	authService := service.NewAuthService(tokenCfg, userRepo, tokenRepo, producer, topic)
+
 	return &ApiServer{
 		userService: userService,
 		authService: authService,

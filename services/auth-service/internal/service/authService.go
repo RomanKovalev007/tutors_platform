@@ -2,7 +2,6 @@ package service
 
 import (
 	"auth_service/internal/events"
-	"auth_service/pkg/kafka"
 	"auth_service/internal/models"
 	"auth_service/internal/repository"
 	"auth_service/pkg/token"
@@ -16,15 +15,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type EventPublisher interface {
+	Publish(ctx context.Context, topic string, key string, value any) error
+}
 
 type authService struct {
-    producer *kafka.Producer
+    producer EventPublisher
+    topic    string
     userRepo  UserRepository
     tokenRepo  RefreshTokenRepository
     tokens *token.Manager
 }
 
-func NewAuthService(tokenCfg token.TokenConfig, userRepo UserRepository, tokenRepo RefreshTokenRepository, producer *kafka.Producer) *authService {
+func NewAuthService(tokenCfg token.TokenConfig, userRepo UserRepository, tokenRepo RefreshTokenRepository, producer EventPublisher, topic string) *authService {
     if producer == nil {
 		panic("kafka producer is nil")
 	}
@@ -33,6 +36,7 @@ func NewAuthService(tokenCfg token.TokenConfig, userRepo UserRepository, tokenRe
         tokenRepo:  tokenRepo,
         tokens: token.NewManager(tokenCfg),
         producer: producer,
+        topic:    topic,
     }
 }
 
@@ -75,7 +79,7 @@ func (s *authService) Register(ctx context.Context, email, password, confirmPass
 	}
 
 
-	if err = s.producer.Publish(ctx, s.producer.Topic, user.ID, event); err != nil{
+	if err = s.producer.Publish(ctx, s.topic, user.ID, event); err != nil{
         log.Println("cant publish user registred event")
     }
 

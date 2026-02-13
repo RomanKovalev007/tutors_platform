@@ -3,7 +3,6 @@ package service
 import (
 	"auth_service/internal/models"
 	"auth_service/internal/repository"
-	"auth_service/pkg/kafka"
 	"auth_service/pkg/token"
 	"context"
 	"errors"
@@ -144,7 +143,7 @@ func (m *mockTokenRepository) DeleteToken(ctx context.Context, token string) err
 
 type mockProducer struct{}
 
-func (m *mockProducer) Publish(ctx context.Context, topic, key string, value interface{}) error {
+func (m *mockProducer) Publish(ctx context.Context, topic, key string, value any) error {
 	return nil
 }
 
@@ -155,15 +154,12 @@ func newTestAuthService(userRepo *mockUserRepository, tokenRepo *mockTokenReposi
 		RefreshTTL: 24 * time.Hour,
 	}
 
-	producer := &kafka.Producer{
-		Topic: "test-topic",
-	}
-
 	return &authService{
 		userRepo:  userRepo,
 		tokenRepo: tokenRepo,
 		tokens:    token.NewManager(tokenCfg),
-		producer:  producer,
+		producer:  &mockProducer{},
+		topic:     "test-topic",
 	}
 }
 

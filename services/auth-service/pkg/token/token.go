@@ -57,7 +57,8 @@ func (m *Manager) ValidateAccessToken(tokenStr string) (string, int64, error) {
 		return "", 0, errors.New("token is empty")
 	}
 
-	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	token, err := parser.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
@@ -66,10 +67,6 @@ func (m *Manager) ValidateAccessToken(tokenStr string) (string, int64, error) {
 
 	if err != nil {
 		return "", 0, err
-	}
-
-	if !token.Valid {
-		return "", 0, errors.New("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)

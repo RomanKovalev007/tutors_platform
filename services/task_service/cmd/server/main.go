@@ -6,12 +6,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/internal/config"
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/internal/repository"
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/internal/service"
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/internal/transport"
-	client "gitlab.crja72.ru/aisavelev-edu.hse.ru/pkg/groupClient"
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/pkg/pool"
+	"task_service/internal/config"
+	"task_service/internal/repository"
+	"task_service/internal/service"
+	"task_service/internal/transport"
+	client "task_service/pkg/groupClient"
+	"task_service/pkg/pool"
 )
 
 type app struct {

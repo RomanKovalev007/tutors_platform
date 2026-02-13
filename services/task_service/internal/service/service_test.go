@@ -6,7 +6,7 @@ import (
 	"time"
 
 	pb "github.com/RomanKovalev007/tutors_platform/api/gen/go/group"
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/internal/models"
+	"task_service/internal/models"
 	"google.golang.org/grpc/codes"
 )
 

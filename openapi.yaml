@@ -1,0 +1,1895 @@
+openapi: 3.0.3
+info:
+  title: Tutors Platform API
+  description: API для платформы репетиторов - управление пользователями, группами и заданиями
+  version: 1.0.0
+  contact:
+    name: Roman Kovalev
+    url: https://github.com/RomanKovalev007/tutors_platform
+
+servers:
+  - url: http://localhost
+    description: Local development server
+  - url: http://localhost:8080
+    description: API Gateway direct access
+
+tags:
+  - name: Auth
+    description: Аутентификация и авторизация
+  - name: Users
+    description: Управление профилями пользователей
+  - name: Tutors
+    description: Управление профилями репетиторов
+  - name: Students
+    description: Управление профилями студентов
+  - name: Groups
+    description: Управление группами
+  - name: Tasks
+    description: Управление заданиями
+  - name: Submissions
+    description: Управление решениями заданий
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ==================== AUTH ====================
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация нового пользователя
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Успешная регистрация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Неверные данные запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Вход в систему
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Неверные учетные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Выход из системы
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Успешный выход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Обновление токенов
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokensRequest'
+      responses:
+        '200':
+          description: Токены обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          description: Невалидный refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Изменение пароля
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Пароль изменен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+        '400':
+          description: Неверный старый пароль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Запрос на восстановление пароля
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Письмо с инструкциями отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  /v1/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Сброс пароля по токену
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Пароль сброшен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+        '400':
+          description: Невалидный или истекший токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/users:
+    get:
+      tags: [Auth]
+      summary: Список пользователей
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список пользователей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListAuthUsersResponse'
+
+  /v1/auth/users/{user_id}:
+    get:
+      tags: [Auth]
+      summary: Получить пользователя по ID
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAuthUserResponse'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Auth]
+      summary: Удалить пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Пользователь удален
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  /v1/auth/users/{user_id}/status:
+    patch:
+      tags: [Auth]
+      summary: Обновить статус пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Статус обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  /v1/auth/users/email/{email}:
+    get:
+      tags: [Auth]
+      summary: Получить пользователя по email
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAuthUserResponse'
+
+  # ==================== USERS ====================
+  /v1/users:
+    post:
+      tags: [Users]
+      summary: Создать профиль пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserProfileRequest'
+      responses:
+        '200':
+          description: Профиль создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+    get:
+      tags: [Users]
+      summary: Список профилей пользователей
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список профилей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListUserProfilesResponse'
+
+  /v1/users/{user_id}:
+    get:
+      tags: [Users]
+      summary: Получить профиль пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '404':
+          description: Профиль не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Users]
+      summary: Обновить профиль пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: Профиль обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+    delete:
+      tags: [Users]
+      summary: Удалить профиль пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Профиль удален
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  /v1/users/{user_id}/types:
+    get:
+      tags: [Users]
+      summary: Получить типы пользователя (репетитор/студент)
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Типы пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTypesResponse'
+
+  /v1/users/{user_id}/full:
+    get:
+      tags: [Users]
+      summary: Получить полный профиль пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Полный профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCompleteUserProfileResponse'
+
+  /v1/users/email/{email}:
+    get:
+      tags: [Users]
+      summary: Получить профиль по email
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+
+  # ==================== TUTORS ====================
+  /v1/tutors:
+    post:
+      tags: [Tutors]
+      summary: Создать профиль репетитора
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTutorProfileRequest'
+      responses:
+        '200':
+          description: Профиль репетитора создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutorProfileResponse'
+
+  /v1/tutors/{user_id}:
+    get:
+      tags: [Tutors]
+      summary: Получить профиль репетитора
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Профиль репетитора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutorProfileResponse'
+        '404':
+          description: Профиль не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Tutors]
+      summary: Обновить профиль репетитора
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTutorProfileRequest'
+      responses:
+        '200':
+          description: Профиль обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TutorProfileResponse'
+    delete:
+      tags: [Tutors]
+      summary: Удалить профиль репетитора
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Профиль удален
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  # ==================== STUDENTS ====================
+  /v1/students:
+    post:
+      tags: [Students]
+      summary: Создать профиль студента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudentProfileRequest'
+      responses:
+        '200':
+          description: Профиль студента создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfileResponse'
+
+  /v1/students/{user_id}:
+    get:
+      tags: [Students]
+      summary: Получить профиль студента
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Профиль студента
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfileResponse'
+        '404':
+          description: Профиль не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Students]
+      summary: Обновить профиль студента
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentProfileRequest'
+      responses:
+        '200':
+          description: Профиль обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfileResponse'
+    delete:
+      tags: [Students]
+      summary: Удалить профиль студента
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Профиль удален
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  # ==================== GROUPS ====================
+  /v1/groups:
+    post:
+      tags: [Groups]
+      summary: Создать группу
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '200':
+          description: Группа создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGroupResponse'
+    get:
+      tags: [Groups]
+      summary: Список групп
+      parameters:
+        - name: tutor_id
+          in: query
+          description: Фильтр по ID репетитора
+          schema:
+            type: string
+            format: uuid
+        - name: student_id
+          in: query
+          description: Фильтр по ID студента
+          schema:
+            type: string
+            format: uuid
+        - name: include_members
+          in: query
+          description: Включить список участников
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Список групп
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGroupsResponse'
+
+  /v1/groups/{id}:
+    get:
+      tags: [Groups]
+      summary: Получить группу
+      parameters:
+        - $ref: '#/components/parameters/GroupIdPath'
+        - name: include_members
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Данные группы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetGroupResponse'
+        '404':
+          description: Группа не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Groups]
+      summary: Обновить группу
+      parameters:
+        - $ref: '#/components/parameters/GroupIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroupRequest'
+      responses:
+        '200':
+          description: Группа обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateGroupResponse'
+    delete:
+      tags: [Groups]
+      summary: Удалить группу
+      parameters:
+        - $ref: '#/components/parameters/GroupIdPath'
+      responses:
+        '200':
+          description: Группа удалена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteGroupResponse'
+
+  /v1/groups/{group_id}/members:
+    get:
+      tags: [Groups]
+      summary: Список участников группы
+      parameters:
+        - $ref: '#/components/parameters/GroupIdPathAlt'
+      responses:
+        '200':
+          description: Список участников
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGroupMembersResponse'
+    post:
+      tags: [Groups]
+      summary: Добавить участников в группу
+      parameters:
+        - $ref: '#/components/parameters/GroupIdPathAlt'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddGroupMembersRequest'
+      responses:
+        '200':
+          description: Участники добавлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddGroupMembersResponse'
+
+  /v1/groups/{group_id}/members:remove:
+    post:
+      tags: [Groups]
+      summary: Удалить участников из группы
+      parameters:
+        - $ref: '#/components/parameters/GroupIdPathAlt'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveGroupMembersRequest'
+      responses:
+        '200':
+          description: Участники удалены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveGroupMembersResponse'
+
+  # ==================== TASKS ====================
+  /v1/tasks:
+    post:
+      tags: [Tasks]
+      summary: Создать задание
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '200':
+          description: Задание создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTaskResponse'
+
+  /v1/tasks/created-by-me:
+    get:
+      tags: [Tasks]
+      summary: Мои созданные задания
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Список заданий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCreatedByMeTasksResponse'
+
+  /v1/tasks/{task_id}:
+    get:
+      tags: [Tasks]
+      summary: Получить задание
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      responses:
+        '200':
+          description: Данные задания
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTaskResponse'
+        '404':
+          description: Задание не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Tasks]
+      summary: Обновить задание
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Задание обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTaskResponse'
+    delete:
+      tags: [Tasks]
+      summary: Удалить задание
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Задание удалено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteTaskResponse'
+
+  /v1/groups/{group_id}/tasks:
+    get:
+      tags: [Tasks]
+      summary: Задания группы
+      parameters:
+        - $ref: '#/components/parameters/GroupIdPathAlt'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Список заданий группы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetGroupTasksResponse'
+
+  /v1/tasks/{task_id}/submissions:
+    post:
+      tags: [Submissions]
+      summary: Отправить решение
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubmissionRequest'
+      responses:
+        '200':
+          description: Решение отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSubmissionResponse'
+    get:
+      tags: [Submissions]
+      summary: Список решений задания
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Список решений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTaskSubmissionsResponse'
+
+  /v1/submissions/{submission_id}:
+    get:
+      tags: [Submissions]
+      summary: Получить решение
+      parameters:
+        - $ref: '#/components/parameters/SubmissionIdPath'
+      responses:
+        '200':
+          description: Данные решения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSubmissionResponse'
+    patch:
+      tags: [Submissions]
+      summary: Обновить решение
+      parameters:
+        - $ref: '#/components/parameters/SubmissionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubmissionRequest'
+      responses:
+        '200':
+          description: Решение обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateSubmissionResponse'
+    delete:
+      tags: [Submissions]
+      summary: Удалить решение
+      parameters:
+        - $ref: '#/components/parameters/SubmissionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Решение удалено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteSubmissionResponse'
+
+  /v1/submissions/{submission_id}/grade:
+    post:
+      tags: [Submissions]
+      summary: Оценить решение
+      parameters:
+        - $ref: '#/components/parameters/SubmissionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GradeSubmissionRequest'
+      responses:
+        '200':
+          description: Решение оценено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradeSubmissionResponse'
+
+  /v1/submissions/{submission_id}/reset-grade:
+    post:
+      tags: [Submissions]
+      summary: Сбросить оценку
+      parameters:
+        - $ref: '#/components/parameters/SubmissionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetGradeRequest'
+      responses:
+        '200':
+          description: Оценка сброшена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetGradeResponse'
+
+  # ==================== SYSTEM ====================
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /metrics:
+    get:
+      tags: [System]
+      summary: Prometheus metrics
+      security: []
+      responses:
+        '200':
+          description: Метрики в формате Prometheus
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен, полученный при login или register
+
+  parameters:
+    UserIdPath:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID пользователя
+
+    GroupIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID группы
+
+    GroupIdPathAlt:
+      name: group_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID группы
+
+    TaskIdPath:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID задания
+
+    SubmissionIdPath:
+      name: submission_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID решения
+
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+      description: Смещение для пагинации
+
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 100
+      description: Количество записей на страницу
+
+  schemas:
+    # ==================== COMMON ====================
+    EmptyResponse:
+      type: object
+      properties: {}
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid request parameters"
+
+    Timestamp:
+      type: string
+      format: date-time
+      example: "2026-02-08T12:00:00Z"
+
+    Duration:
+      type: string
+      description: Duration in ISO 8601 format
+      example: "PT1H30M"
+
+    # ==================== AUTH ====================
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    RegisterRequest:
+      type: object
+      required: [email, password, confirm_password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "SecurePass123"
+        confirm_password:
+          type: string
+          format: password
+          example: "SecurePass123"
+
+    RegisterResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUser'
+        access_token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIs..."
+        refresh_token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIs..."
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          example: "SecurePass123"
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUser'
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+
+    LogoutRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    RefreshTokensRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          description: Время жизни токена в секундах
+          example: 300
+
+    ChangePasswordRequest:
+      type: object
+      required: [user_id, old_password, new_password, confirm_password]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        old_password:
+          type: string
+          format: password
+        new_password:
+          type: string
+          format: password
+        confirm_password:
+          type: string
+          format: password
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        reset_url_template:
+          type: string
+          example: "https://example.com/reset?token={token}"
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, new_password, confirm_password]
+      properties:
+        token:
+          type: string
+        new_password:
+          type: string
+          format: password
+        confirm_password:
+          type: string
+          format: password
+
+    GetAuthUserResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUser'
+
+    ListAuthUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthUser'
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # ==================== USER PROFILES ====================
+    UserProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          example: "Иван"
+        surname:
+          type: string
+          example: "Петров"
+        telegram:
+          type: string
+          example: "@ivan_tutor"
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    CreateUserProfileRequest:
+      type: object
+      required: [user_id, email, name, surname]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        surname:
+          type: string
+        telegram:
+          type: string
+
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        surname:
+          type: string
+        telegram:
+          type: string
+
+    UserProfileResponse:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+
+    ListUserProfilesResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+        offset:
+          type: integer
+        limit:
+          type: integer
+
+    UserTypes:
+      type: object
+      properties:
+        is_tutor:
+          type: boolean
+        is_student:
+          type: boolean
+
+    UserTypesResponse:
+      type: object
+      properties:
+        types:
+          $ref: '#/components/schemas/UserTypes'
+
+    GetCompleteUserProfileResponse:
+      type: object
+      properties:
+        user_profile:
+          $ref: '#/components/schemas/UserProfile'
+        tutor_profile:
+          $ref: '#/components/schemas/TutorProfile'
+        student_profile:
+          $ref: '#/components/schemas/StudentProfile'
+
+    # ==================== TUTOR PROFILES ====================
+    TutorProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        specialization:
+          type: string
+          example: "Математика, Физика"
+        experience_years:
+          type: integer
+          example: 5
+        bio:
+          type: string
+          example: "Преподаю математику для школьников"
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    CreateTutorProfileRequest:
+      type: object
+      required: [user_id, specialization, experience_years]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        specialization:
+          type: string
+        experience_years:
+          type: integer
+        bio:
+          type: string
+
+    UpdateTutorProfileRequest:
+      type: object
+      properties:
+        specialization:
+          type: string
+        experience_years:
+          type: integer
+        bio:
+          type: string
+
+    TutorProfileResponse:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/TutorProfile'
+
+    # ==================== STUDENT PROFILES ====================
+    StudentProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        grade_level:
+          type: string
+          example: "10 класс"
+        bio:
+          type: string
+          example: "Готовлюсь к ЕГЭ"
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    CreateStudentProfileRequest:
+      type: object
+      required: [user_id, grade_level]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        grade_level:
+          type: string
+        bio:
+          type: string
+
+    UpdateStudentProfileRequest:
+      type: object
+      properties:
+        grade_level:
+          type: string
+        bio:
+          type: string
+
+    StudentProfileResponse:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/StudentProfile'
+
+    # ==================== GROUPS ====================
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tutor_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Математика 10 класс"
+        description:
+          type: string
+          example: "Подготовка к ЕГЭ"
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        member_count:
+          type: integer
+          example: 5
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+
+    GroupMember:
+      type: object
+      properties:
+        group_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        joined_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    CreateGroupRequest:
+      type: object
+      required: [tutor_id, name]
+      properties:
+        tutor_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+
+    CreateGroupResponse:
+      type: object
+      properties:
+        group:
+          $ref: '#/components/schemas/Group'
+        error:
+          $ref: '#/components/schemas/Error'
+
+    ListGroupsResponse:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+        error:
+          $ref: '#/components/schemas/Error'
+
+    GetGroupResponse:
+      type: object
+      properties:
+        group:
+          $ref: '#/components/schemas/Group'
+        error:
+          $ref: '#/components/schemas/Error'
+
+    UpdateGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    UpdateGroupResponse:
+      type: object
+      properties:
+        group:
+          $ref: '#/components/schemas/Group'
+        error:
+          $ref: '#/components/schemas/Error'
+
+    DeleteGroupResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+
+    ListGroupMembersResponse:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+        error:
+          $ref: '#/components/schemas/Error'
+
+    AddGroupMembersRequest:
+      type: object
+      required: [student_ids]
+      properties:
+        student_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          example: ["770e8400-e29b-41d4-a716-446655440003"]
+
+    AddGroupMembersResponse:
+      type: object
+      properties:
+        added_count:
+          type: integer
+          example: 1
+        error:
+          $ref: '#/components/schemas/Error'
+
+    RemoveGroupMembersRequest:
+      type: object
+      required: [student_ids]
+      properties:
+        student_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    RemoveGroupMembersResponse:
+      type: object
+      properties:
+        removed_count:
+          type: integer
+        error:
+          $ref: '#/components/schemas/Error'
+
+    # ==================== TASKS ====================
+    AssignedTaskStatus:
+      type: string
+      enum: [ACTIVE, EXPIRED]
+      example: ACTIVE
+
+    SubmittedTaskStatus:
+      type: string
+      enum: [UNSPECIFIED, PENDING, VERIFIED]
+      example: PENDING
+
+    AssignedTask:
+      type: object
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+        tutor_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "Домашнее задание: Производные"
+        description:
+          type: string
+        max_score:
+          type: integer
+          example: 10
+        status:
+          $ref: '#/components/schemas/AssignedTaskStatus'
+        deadline:
+          $ref: '#/components/schemas/Timestamp'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+
+    AssignedTaskShort:
+      type: object
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+        tutor_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        deadline:
+          $ref: '#/components/schemas/Timestamp'
+        status:
+          $ref: '#/components/schemas/AssignedTaskStatus'
+
+    CreateTaskRequest:
+      type: object
+      required: [group_id, tutor_id, title, max_score, deadline]
+      properties:
+        group_id:
+          type: string
+          format: uuid
+        tutor_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        max_score:
+          type: integer
+          minimum: 1
+        deadline:
+          type: string
+          format: date-time
+
+    CreateTaskResponse:
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/AssignedTask'
+
+    UpdateTaskRequest:
+      type: object
+      required: [tutor_id]
+      properties:
+        tutor_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        file_id:
+          type: string
+        max_score:
+          type: integer
+        deadline:
+          type: string
+          format: date-time
+
+    UpdateTaskResponse:
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/AssignedTask'
+
+    DeleteTaskResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+
+    GetTaskResponse:
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/AssignedTask'
+
+    GetGroupTasksResponse:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedTaskShort'
+        total:
+          type: integer
+        offset:
+          type: integer
+        limit:
+          type: integer
+
+    GetCreatedByMeTasksResponse:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedTaskShort'
+        total:
+          type: integer
+        offset:
+          type: integer
+        limit:
+          type: integer
+
+    # ==================== SUBMISSIONS ====================
+    SubmittedTask:
+      type: object
+      properties:
+        submission_id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        status:
+          $ref: '#/components/schemas/SubmittedTaskStatus'
+        score:
+          type: integer
+          nullable: true
+        feedback:
+          type: string
+          nullable: true
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+        overdue_by:
+          $ref: '#/components/schemas/Duration'
+
+    SubmittedTaskShort:
+      type: object
+      properties:
+        submission_id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        score:
+          type: integer
+          nullable: true
+        status:
+          $ref: '#/components/schemas/SubmittedTaskStatus'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        overdue_by:
+          $ref: '#/components/schemas/Duration'
+
+    CreateSubmissionRequest:
+      type: object
+      required: [student_id, content]
+      properties:
+        task_id:
+          type: string
+          format: uuid
+          description: Можно передать в URL или в body
+        student_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+          example: "Решение задачи..."
+
+    CreateSubmissionResponse:
+      type: object
+      properties:
+        submission:
+          $ref: '#/components/schemas/SubmittedTask'
+
+    UpdateSubmissionRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+
+    UpdateSubmissionResponse:
+      type: object
+      properties:
+        submission:
+          $ref: '#/components/schemas/SubmittedTask'
+
+    DeleteSubmissionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+
+    GetSubmissionResponse:
+      type: object
+      properties:
+        submission:
+          $ref: '#/components/schemas/SubmittedTask'
+
+    GetTaskSubmissionsResponse:
+      type: object
+      properties:
+        submissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubmittedTaskShort'
+        total:
+          type: integer
+        offset:
+          type: integer
+        limit:
+          type: integer
+
+    GradeSubmissionRequest:
+      type: object
+      required: [tutor_id]
+      properties:
+        submission_id:
+          type: string
+          format: uuid
+          description: Можно передать в URL или в body
+        tutor_id:
+          type: string
+          format: uuid
+        score:
+          type: integer
+          minimum: 0
+        feedback:
+          type: string
+
+    GradeSubmissionResponse:
+      type: object
+      properties:
+        submission:
+          $ref: '#/components/schemas/SubmittedTask'
+
+    ResetGradeRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+
+    ResetGradeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean

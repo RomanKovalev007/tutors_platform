@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/pkg/resilience"
+	"task_service/pkg/resilience"
 
 	pb "github.com/RomanKovalev007/tutors_platform/api/gen/go/group"
 

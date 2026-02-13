@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/ilyakaznacheev/cleanenv"
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/pkg/pool"
+	"task_service/pkg/pool"
 )
 
 type Config struct {

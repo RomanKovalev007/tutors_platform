@@ -11,22 +11,20 @@ WORKDIR /app
 # Добавляем ARG для инвалидации кэша при изменении кода
 ARG CACHEBUST=1
 
-# Копируем go.mod и go.sum в корень
-COPY services/task_service/go.mod services/task_service/go.sum ./
+# Копируем модуль api в корень проекта (чтобы ../../api работал)
+COPY api/ ./api/
 
+# Создаем структуру каталогов и копируем go.mod и go.sum task_service
+COPY services/task_service/go.mod services/task_service/go.sum ./services/task_service/
+
+# Переходим в рабочую директорию сервиса
+WORKDIR /app/services/task_service
+
+# Теперь go mod download видит ../../api/go.mod и использует локальный replace
 RUN go mod download
 
-# Копируем весь код task_service в корень /app (как было раньше)
+# Копируем весь код task_service
 COPY services/task_service/ ./
-
-# Копируем общий модуль api, если он есть
-COPY api ./api
-
-# Выполняем go mod tidy
-RUN go mod tidy
-
-# Копируем миграции
-COPY services/task_service/migrations /migrations
 
 # Собираем бинарники — пути от корня модуля
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
@@ -42,13 +40,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # ====================== RUNTIME STAGE ======================
 FROM alpine:latest AS runtime
 
-RUN apk --no-cache add ca-certificates tzdata
+# Устанавливаем только netcat и tzdata, ca-certificates копируем из builder
+RUN apk add --no-cache netcat-openbsd tzdata 2>/dev/null || apk add --no-cache busybox-extras tzdata
 
 WORKDIR /app
 
+# Копируем ca-certificates из builder образа
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/server /app/server
 COPY --from=builder /app/migrate /app/migrate
-COPY --from=builder /migrations /migrations
+COPY --from=builder /app/services/task_service/migrations /migrations
 
 # ====================== TARGETS ======================
 FROM runtime AS base

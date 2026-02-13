@@ -7,7 +7,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"gitlab.crja72.ru/aisavelev-edu.hse.ru/internal/models"
+	"task_service/internal/models"
 )
 
 type Repository struct {

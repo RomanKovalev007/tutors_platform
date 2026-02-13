@@ -3,8 +3,8 @@ services:
   # auth
   auth-go:
     build:
-      context: ./services/auth-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/auth-service/Dockerfile
     environment:
       GOPRIVATE: gitlab.crja72.ru
       GOSUMDB: off
@@ -30,8 +30,8 @@ services:
   # user
   user-go:
     build:
-      context: ./services/user-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/user-service/Dockerfile
     container_name: user-app
     depends_on:
       postgres-user:
@@ -96,8 +96,8 @@ services:
   # group
   group-go:
     build:
-      context: ./services/group-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/group-service/Dockerfile
     container_name: group-app
     depends_on:
       postgres-group:

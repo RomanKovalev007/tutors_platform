@@ -173,6 +173,8 @@ services:
     image: docker.io/postgres:15-alpine
     platform: linux/amd64
     container_name: postgres-user
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_DB: user_db
       POSTGRES_USER: user_user
